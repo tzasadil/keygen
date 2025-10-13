@@ -26,6 +26,7 @@ pub struct Penalty {
     pub penalties: Vec<KeyPenalty>,
     pub fingers: [i64; 8],
     pub hands: [i64; 2],
+    pub hand_penalties: [f64; 2],
     pub total: f64,
     pub len: i64,
 }
@@ -44,6 +45,7 @@ impl Penalty {
             penalties: penalties,
             fingers: [0; 8],
             hands: [0; 2],
+            hand_penalties: [0.0; 2],
             total: 0.0,
             len : 0,
         }
@@ -83,8 +85,10 @@ impl fmt::Display for KeyPenalty {
 }
 
 static BASE_PENALTY: KeyMap<f64> = [
-    5.0, 0.5, 0.5, 1.5, 2.5, 2.5, 1.5, 0.5, 0.5, 5.0, 5.0, 2.5, 0.0, 0.0, 0.0, 1.0, 1.5, 0.0, 0.0,
-    0.0, 1.5, 5.0, 20.0, 2.0, 1.5, 1.0, 5.0, 5.0, 1.0, 1.5, 2.0, 20.0, 0.0, 0.0,
+    3.0, 1.0, 1.0, 1.0, 2.5,   2.5, 1.0, 1.0, 1.0, 3.0, 5.0, 
+    0.5, 0.1, 0.1, 0.1, 1.0,   1.0, 0.1, 0.1, 0.1, 1.5, 5.0, 
+    10.0, 1.5, 1.5, 1.0, 2.5,   2.5, 1.0, 1.5, 1.5, 3.0, 
+                        0.0,    0.0,
 ];
 
 static PenaltyDescriptions: [KeyPenaltyDescription; 15] = [
@@ -109,7 +113,7 @@ static PenaltyDescriptions: [KeyPenaltyDescription; 15] = [
     // top row on the same finger.
     KeyPenaltyDescription {
         name: "Long jump",
-        show: false,
+        show: true,
     },
     // Penalise 5 points for jumping from top to bottom row or from bottom to
     // top row on consecutive fingers, except for middle finger-top row ->
@@ -129,7 +133,7 @@ static PenaltyDescriptions: [KeyPenaltyDescription; 15] = [
     // middle, pinky, then ring of the same hand.
     KeyPenaltyDescription {
         name: "Roll reversal",
-        show: false,
+        show: true,
     },
     //7
     KeyPenaltyDescription {
@@ -179,8 +183,8 @@ pub fn prepare_quartad_list<'a>(
 ) -> QuartadList<'a> {
     let mut quartads: HashMap<&str, i64> = HashMap::new();
 
-    for i in 0..string.chars().count() - 4 {
-        let slice = &string[i..i + 4];
+    for i in 0..string.chars().count() - 3 {
+        let slice = &string[i..i + 3];
         if slice
             .chars()
             .all(|c| (c as i32) <= 128)
@@ -199,10 +203,6 @@ pub fn calculate_penalty<'a>(quartads: &QuartadList<'a>, layout: &Layout) -> Bes
     for (string, count) in &quartads.map {
         let mut chars = string.chars().into_iter();
 
-        let old3 = chars
-            .next()
-            .map(|c| position_map.get_key_position(c))
-            .unwrap_or(&KP_NONE);
 
         let old2 = chars
             .next()
@@ -240,18 +240,32 @@ pub fn calculate_penalty<'a>(quartads: &QuartadList<'a>, layout: &Layout) -> Bes
                 useFinger(&mut result, 4);
             }
             _ => {}
-        }
+        };
         let mut log = |i: usize, penalty: f64| {
             let p = penalty * *count as f64;
             //println!("{}; {}", i, penalty);
-            result.penalties[i].times += *count as f64;
-            result.penalties[i].total += p;
+            if i!=99 {//&& curr.hand!= Hand::Left{
+                result.penalties[i].times += *count as f64;
+                result.penalties[i].total += p;
+                
+
+            }
+            match curr.hand {
+                Hand::Left => {
+                    result.hand_penalties[0] += p;
+                }
+                Hand::Right => {
+                    result.hand_penalties[1] += p;
+
+                }
+                _ => {}
+            };
             result.total += p;
         };
 
         let count = *count as f64;
         // 0: Base penalty.
-        log(0, BASE_PENALTY[curr.pos] / 5.0);
+        log(0, BASE_PENALTY[curr.pos] / 3.0);
 
         let old1 = match *old1 {
             Some(ref o) => o,
@@ -259,26 +273,28 @@ pub fn calculate_penalty<'a>(quartads: &QuartadList<'a>, layout: &Layout) -> Bes
         };
 
         if curr.hand == old1.hand && curr.hand != Hand::Thumb {
+            if curr.finger == old1.finger && curr.pos == old1.pos {
+                continue;
+            }
+            
             // 1: Same finger.
             if curr.finger == old1.finger && curr.pos != old1.pos {
-                let penalty =
-                    15.0 ;//+ if curr.center { 5.0 } else { 0.0 } ;
-                log(1, penalty );
+                log(1, 5.0 );
             }
 
             // 2: Long jump hand.
             if curr.row == Row::Top && old1.row == Row::Bottom
                 || curr.row == Row::Bottom && old1.row == Row::Top
             {
-                log(2, 5.0);
+                log(2, 0.0);
             }
 
             // 3: Long jump.
             if curr.finger == old1.finger {
                 if curr.row == Row::Top && old1.row == Row::Bottom
-                    || curr.row == Row::Bottom && old1.row == Row::Top
+                    //|| curr.row == Row::Bottom && old1.row == Row::Top
                 {
-                    log(3, 20.0);
+                    log(3, 0.0);
                 }
             }
             
@@ -295,7 +311,7 @@ pub fn calculate_penalty<'a>(quartads: &QuartadList<'a>, layout: &Layout) -> Bes
                         && curr.row == Row::Top
                         && old1.row == Row::Bottom)
                 {
-                    log(4, 5.0);
+                    log(3, 10.0);
                 }
             }
 
@@ -314,31 +330,25 @@ pub fn calculate_penalty<'a>(quartads: &QuartadList<'a>, layout: &Layout) -> Bes
             
             // 9: Roll out.
             if is_roll_out(curr.finger, old1.finger) {
-                log(9, 1.0);
-                if curr.row == Row::Top && old1.row == Row::Bottom
-                    || curr.row == Row::Bottom && old1.row == Row::Top{
-                    log(7, 10.5);
-                }
+                log(9, -0.01);
+                
             }
 
             // 10: Roll in.
             if is_roll_in(curr.finger, old1.finger) {
-                if old1.row!= Row::Bottom&&!(
+                if old1.row!= Row::Bottom&& !(
                     curr.row == Row::Top && old1.row == Row::Bottom
-                    || curr.row == Row::Bottom && old1.row == Row::Top
+                    || (curr.row == Row::Bottom && old1.row == Row::Top && curr.finger != Finger::Index)
                 ){
-                    log(10, -0.5);
+                    log(10, -0.99);
                 }
-                else{
+                else{ //unconfortable roll in
+                    
+                }
 
-                }
-
-                if is_roll_in2(curr.finger, old1.finger) {
-                    //result[10].times+=count;
-                }
-                if is_roll_out2(curr.finger, old1.finger) {
-                    //result[9].times+=count;
-                }
+            }
+            if old1.finger != Finger::Thumb && ( is_roll_in2(curr.finger, old1.finger) && is_roll_in(curr.finger, old1.finger)){
+                log(99,2.0);
             }
             
         }
@@ -346,26 +356,22 @@ pub fn calculate_penalty<'a>(quartads: &QuartadList<'a>, layout: &Layout) -> Bes
             Some(ref o) => o,
             None => continue,
         };
-        // Three key penalties.
-        let old3 = match *old3 {
-            Some(ref o) => o,
-            None => continue,
-        };
+    
 
-        if curr.hand == old1.hand && old1.hand == old2.hand && old2.hand == old3.hand {
-            // 13: 4 no alternation
-            log(13, 1.2);
-        } else if curr.hand != old1.hand
-            && old1.hand != old2.hand
-            && old2.hand != old3.hand
-            && curr.hand != Hand::Thumb
-            && old1.hand != Hand::Thumb
-            && old2.hand != Hand::Thumb
-            && old3.hand != Hand::Thumb
-        {
+        // if curr.hand == old1.hand && old1.hand == old2.hand && old2.hand == old3.hand {
+        //     // 13: 4 no alternation
+        //     log(13, 5.2);
+        // } else if curr.hand != old1.hand
+        //     && old1.hand != old2.hand
+        //     && old2.hand != old3.hand
+        //     && curr.hand != Hand::Thumb
+        //     && old1.hand != Hand::Thumb
+        //     && old2.hand != Hand::Thumb
+        //     && old3.hand != Hand::Thumb
+        // {
             // 14: 4 alternations in a row.
-            log(14, 0.01);
-        }
+        //     log(14, 0.1);
+        // }
         //8: Alternation
         if curr.hand != old1.hand {
             log(8, -0.1);
@@ -380,18 +386,18 @@ pub fn calculate_penalty<'a>(quartads: &QuartadList<'a>, layout: &Layout) -> Bes
                     && old1.finger == Finger::Pinky
                     && old2.finger == Finger::Middle
             {
-                log(6, 10.0);
+                log(6, 3.0);
             }
 
             // 12: Twist.
             if ((curr.row == Row::Top && old1.row == Row::Home && old2.row == Row::Bottom)
-                || (curr.row == Row::Bottom && old1.row == Row::Home && old2.row == Row::Top))
+            || (curr.row == Row::Bottom && old1.row == Row::Home && old2.row == Row::Top))
                 && ((is_roll_out(curr.finger, old1.finger)
                     && is_roll_out(old1.finger, old2.finger))
                     || (is_roll_in(curr.finger, old1.finger)
                         && is_roll_in(old1.finger, old2.finger)))
             {
-                log(12, 5.0);
+                log(12, 0.0);
             }
         }
 
@@ -400,7 +406,7 @@ pub fn calculate_penalty<'a>(quartads: &QuartadList<'a>, layout: &Layout) -> Bes
             if curr.row == Row::Top && old2.row == Row::Bottom
                 || curr.row == Row::Bottom && old2.row == Row::Top
             {
-                log(11, 3.0);
+                log(11, 5.0);
             }
         }
 
@@ -442,6 +448,7 @@ pub fn calculate_penalty<'a>(quartads: &QuartadList<'a>, layout: &Layout) -> Bes
             }
         }
     }
+    //result.total = *(result.hand_penalties.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap());
     BestLayoutsEntry {
         layout: layout.clone(),
         penalty: result,

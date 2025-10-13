@@ -6,6 +6,7 @@ mod annealing;
 mod simulator;
 
 
+use std::convert::TryInto;
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -26,16 +27,18 @@ use penalty::QuartadList;
 
 /* running options
 
-	cargo run -- run corpus/books.short.txt
+	cargo run -- run corpus/english.txt
 		tests reference layouts and then runs optimaliser
 	
-	cargo run -- run-ref corpus/books.short.txt
+	cargo run -- run-ref corpus/english.txt
 		test reference layouts
 
 
 */
 fn main()
 {
+	let start_layout = &layout::TESTING3;
+
 	let mut opts = Options::new();
 	opts.optflag("h", "help", "print this help menu");
 	opts.optflag("d", "debug", "show debug logging");
@@ -68,27 +71,19 @@ fn main()
 			return;
 		},
 	};
-	let mut f = match File::open(corpus_filename) {
-		Ok(f) => f,
-		Err(e) => {
-			println!("Error: {}", e);
-			panic!("could not read corpus");
-		},
-	};
-	let mut corpus = String::new();
-	match f.read_to_string(&mut corpus) {
-		Ok(_) => (),
-		Err(e) => {
-			println!("Error: {}", e);
-			panic!("could not read corpus");
-		}
-	};
-
+	print!("\n");
+	print!("{}",corpus_filename);
+	let corpus:String= std::fs::read_to_string(corpus_filename)
+		.expect("Should have been able to read the file")
+		.to_ascii_lowercase()
+		.chars()
+		.filter(|c: &char|(*c).is_alphabetic() || (*c).is_whitespace())
+		.collect();
 
 	// Read layout, if applicable.
 	let _layout;
 	let layout = match matches.free.get(1) {
-		None => &layout::QWERTY_LAYOUT,
+		None => start_layout,
 		Some(layout_filename) => {
 			let mut f = match File::open(layout_filename) {
 				Ok(f) => f,
@@ -115,7 +110,7 @@ fn main()
 	let top   = numopt(matches.opt_str("t"), 1usize);
 	let swaps = numopt(matches.opt_str("s"), 2usize);
 
-	match command.as_ref() {
+	match command.as_ref() { 
 		"run" => run(&corpus[..], layout, debug, top, swaps),
 		"run-ref" => run_ref(&corpus[..], None),
 		_ => print_usage(progname, opts),
@@ -145,17 +140,14 @@ fn run_ref(s: &str,quartads:Option<&QuartadList> )
 			println!("");
 		};
 		ref_test("QWERTY", &layout::QWERTY_LAYOUT);
-		ref_test("DVORAK", &layout::DVORAK_LAYOUT);
-		ref_test("MTGAP", &layout::MTGAP_LAYOUT);
-		ref_test("COLEMAK", &layout::COLEMAK_LAYOUT);
-		ref_test("QGMLWY", &layout::QGMLWY_LAYOUT);
-		ref_test("ARENSITO", &layout::ARENSITO_LAYOUT);
-		ref_test("MALTRON", &layout::MALTRON_LAYOUT);
-		ref_test("RSTHD", &layout::RSTHD);
-		ref_test("CAPEWELL", &layout::CAPEWELL_LAYOUT);
-		//ref_test("DABEST", &layout::DABEST);
-		//ref_test("THE_ONE", &layout::The_One);
-		//ref_test("X1", &layout::X1);
+		ref_test("X1", &layout::X1);
+		ref_test("TESTING", &layout::TESTING);
+		ref_test("TESTING2", &layout::TESTING2);
+		ref_test("TESTING3", &layout::TESTING3);
+		ref_test("CURRENT", &layout::CURRENT);
+		ref_test("CURRENT2", &layout::CURRENT2);
+	
+		
 	};
 	
 	match  quartads {

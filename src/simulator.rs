@@ -53,8 +53,9 @@ pub fn simulate<'a>(
                 let mut accepted_layout = entry.clone();
                 let mut bestLayout: BestLayoutsEntry = entry.clone();
 
-                let printFrequency = thread_rng().gen::<i32>() % 5000 + 5000;
-
+                let printDelay = thread_rng().gen::<i32>() % 5000 ;
+                let printFrequency =  5000;
+                let in_over_out = false;
                 for cycle in 1..CYCLES + 1 {
                     let mut curr_layout = accepted_layout.clone();
                     curr_layout
@@ -64,7 +65,7 @@ pub fn simulate<'a>(
                     // Calculate penalty.
                     curr_layout = penalty::calculate_penalty(&quartads, &curr_layout.layout);
 
-                    if curr_layout.penalty.total < bestLayout.penalty.total {
+                    if curr_layout.penalty.total < bestLayout.penalty.total && (!in_over_out || curr_layout.penalty.penalties[10].times > curr_layout.penalty.penalties[9].times){
                         bestLayout = curr_layout.clone();
                     }
                     // Probabilistically accept worse transitions; always accept better
@@ -72,10 +73,10 @@ pub fn simulate<'a>(
                     if annealing::accept_transition(
                         (curr_layout.penalty.total - accepted_layout.penalty.total) / (accepted_layout.penalty.total as f64),
                         cycle as usize,
-                    ) {
+                    )&& (!in_over_out || curr_layout.penalty.penalties[10].times > curr_layout.penalty.penalties[9].times){
                         accepted_layout = curr_layout.clone();
                     }
-                    if cycle % printFrequency  == 0 {
+                    if (cycle+printDelay) % printFrequency  == 0 {
                         print_result(&bestLayout);
                     }
                 }

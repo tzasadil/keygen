@@ -58,7 +58,7 @@ cargo run --release -- run corpus/english.txt
 
 With [just](https://github.com/casey/just): `just ref czech`, `just search german`, `just test`. Run `just` to list all recipes.
 
-Browser playground: `just serve`. It needs [Trunk](https://trunkrs.dev).
+Browser playground: [tzasadil.github.io/keygen](https://tzasadil.github.io/keygen/). Run it locally with `just serve`, which needs [Trunk](https://trunkrs.dev).
 
 Sample report for QWERTY:
 

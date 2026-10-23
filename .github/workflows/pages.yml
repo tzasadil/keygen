@@ -1,0 +1,74 @@
+name: Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions: {}
+
+# Never cancel a running deploy: a half-finished one can leave Pages stale.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  TRUNK_VERSION: v0.22.0
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pages: read # configure-pages reads the site's base path.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+          rustup target add wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: cargo test
+      - name: Install Trunk
+        run: |
+          asset=trunk-x86_64-unknown-linux-gnu.tar.gz
+          base=https://github.com/trunk-rs/trunk/releases/download/$TRUNK_VERSION
+          curl -sSfL -O "$base/$asset" -O "$base/$asset.sha256"
+          # The .sha256 file holds only the hash, so add the filename for -c.
+          echo "$(cat "$asset.sha256")  $asset" | sha256sum -c
+          tar -xzf "$asset" -C /usr/local/bin trunk
+      - id: pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      # base_path is "/keygen" for this repo, so assets and corpus fetches
+      # resolve under the project site.
+      - run: trunk build --release --public-url "$BASE_PATH/"
+        working-directory: app
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: app/dist
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write # deploy-pages publishes the site.
+      id-token: write # deploy-pages proves via OIDC that the deploy comes from this workflow.
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -314,12 +314,6 @@ button.key:focus-visible {
   text-align: right;
 }
 
-.data-table tfoot th,
-.data-table tfoot td {
-  font-weight: 650;
-  border-bottom: 0;
-}
-
 .bar-cell {
   width: 40%;
 }

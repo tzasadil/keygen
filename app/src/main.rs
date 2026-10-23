@@ -611,22 +611,24 @@ fn BarRows(scores: Scores, rows: &'static [(&'static str, Load)]) -> impl IntoVi
 
 #[component]
 fn PenaltyTable(sides: [Side; 2], scores: Scores) -> impl IntoView {
-    let cost = move |s: usize, kind: PenaltyKind| {
-        move || format!("{:.3}", read(scores, s, |p| p.row(kind).total / p.len as f64))
+    // Share of keystrokes on which the penalty fired.
+    let frequency = move |s: usize, kind: PenaltyKind| {
+        move || format!("{:.2}%", read(scores, s, |p| p.row(kind).times / p.len as f64) * 100.0)
     };
     let rows = PenaltyKind::ALL
         .iter()
+        // Base fires on every keystroke, so it would read 100% on every layout.
+        .filter(|&&kind| kind != PenaltyKind::Base)
         .map(|&kind| {
             view! {
                 <tr>
                     <th scope="row">{kind.name()}</th>
-                    <td>{cost(0, kind)}</td>
-                    <td>{cost(1, kind)}</td>
+                    <td>{frequency(0, kind)}</td>
+                    <td>{frequency(1, kind)}</td>
                 </tr>
             }
         })
         .collect_view();
-    let total = move |s: usize| move || format!("{:.3}", read(scores, s, per_keystroke));
 
     view! {
         <table class="data-table numeric">
@@ -638,13 +640,6 @@ fn PenaltyTable(sides: [Side; 2], scores: Scores) -> impl IntoView {
                 </tr>
             </thead>
             <tbody>{rows}</tbody>
-            <tfoot>
-                <tr>
-                    <th scope="row">"Total"</th>
-                    <td>{total(0)}</td>
-                    <td>{total(1)}</td>
-                </tr>
-            </tfoot>
         </table>
     }
 }

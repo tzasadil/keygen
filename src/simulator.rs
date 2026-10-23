@@ -63,7 +63,7 @@ pub fn simulate(
                     // Calculate penalty.
                     curr_layout = penalty::calculate_penalty(&quartads, &curr_layout.layout);
 
-                    if curr_layout.penalty.total < bestLayout.penalty.total && (!in_over_out || curr_layout.penalty.penalties[10].times > curr_layout.penalty.penalties[9].times){
+                    if curr_layout.penalty.total < bestLayout.penalty.total && (!in_over_out || curr_layout.penalty.row(PenaltyKind::RollIn).times > curr_layout.penalty.row(PenaltyKind::RollOut).times){
                         bestLayout = curr_layout.clone();
                     }
                     // Probabilistically accept worse transitions; always accept better
@@ -71,7 +71,7 @@ pub fn simulate(
                     if annealing::accept_transition(
                         (curr_layout.penalty.total - accepted_layout.penalty.total) / (accepted_layout.penalty.total as f64),
                         cycle as usize,
-                    )&& (!in_over_out || curr_layout.penalty.penalties[10].times > curr_layout.penalty.penalties[9].times){
+                    )&& (!in_over_out || curr_layout.penalty.row(PenaltyKind::RollIn).times > curr_layout.penalty.row(PenaltyKind::RollOut).times){
                         accepted_layout = curr_layout.clone();
                     }
                     if (cycle+printDelay) % printFrequency  == 0 {
@@ -177,7 +177,6 @@ pub fn print_result<'a>(item: &BestLayoutsEntry) {
     let penalties = &item.penalty.penalties;
     let penalty = &item.penalty;
     let fingers = &penalty.fingers;
-    let show_all = false;
     print!(
         "{}{}{}{}{}{}{}{}{}",
         format!("\n{}\n", layout),
@@ -195,18 +194,14 @@ pub fn print_result<'a>(item: &BestLayoutsEntry) {
         penalties
             .into_iter()
             .map(|penalty| {
-                if penalty.show || show_all {
-                    format!(
-                        "{:<30} | {:<7.2} | {:<7.3} | {:<8.3} | {:<10.0}\n",
-                        penalty.name,
-                        (100.0 * penalty.times / (len as f64)),
-                        penalty.total / (len as f64),
-                        100.0 * penalty.total / total,
-                        penalty.total
-                    )
-                } else {
-                    "".to_string()
-                }
+                format!(
+                    "{:<30} | {:<7.2} | {:<7.3} | {:<8.3} | {:<10.0}\n",
+                    penalty.kind.name(),
+                    (100.0 * penalty.times / (len as f64)),
+                    penalty.total / (len as f64),
+                    100.0 * penalty.total / total,
+                    penalty.total
+                )
             })
             .collect::<Vec<_>>()
             .join(""),

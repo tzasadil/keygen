@@ -37,7 +37,7 @@ Thumbs carry the remaining load, which is why the hand sum does not add to to 10
 ## What I added to the fork
 
 - **Parallel search**: `rayon` runs one annealing chain per CPU core. A shared pool keeps the best layouts (3 per core). Each round, every core refines one pool entry, then the results are merged, sorted, and trimmed. 5 rounds of 205,000 cycles per chain.
-- **Report**: for every penalty category, a table shows how often it fires, its average cost, and its share of the total. Below it are the load per finger and per hand, so you can see why a layout scores well, not only that it does.
+- **Report**: for every penalty category, a table shows how often it fires, its average cost, and its share of the total. The rows sum to the total, with no hidden costs. Below it are the load per finger and per hand, so you can see why a layout scores well, not only that it does.
 - **Penalty model**:
   - Every switch between hands earns a small reward. Upstream only penalized three alternations in a row.
   - Retuned per-key base costs.
@@ -70,11 +70,14 @@ Name                           | % times |   Avg   | % Total  | Total
 ----------------------------------------------------------------------
 Base                           | 100.00  | 0.305   | 45.938   | 868379
 Same finger                    | 3.85    | 0.192   | 29.018   | 548540
-Long jump                      | 0.98    | 0.028   | 4.154    | 78520
+Long jump consecutive          | 0.28    | 0.028   | 4.154    | 78520
+Pinky/ring twist               | 0.12    | 0.012   | 1.882    | 35570
 Roll reversal                  | 0.09    | 0.003   | 0.390    | 7371
 Alternation                    | 71.61   | -0.072  | -10.797  | -204098
 Roll out                       | 10.29   | -0.001  | -0.155   | -2934
+Any roll in                    | 11.25   | 0.225   | 33.934   | 641466
 Roll in                        | 11.02   | -0.109  | -16.448  | -310926
+Long jump sandwich             | 1.60    | 0.080   | 12.084   | 228435
 ----------------------------------------------------------------------
 
  6.7   7.1  15.2  16.9  | 17.1   6.3   9.6   1.2     <- load per finger

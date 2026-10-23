@@ -2,6 +2,7 @@
 
 extern crate rand;
 
+use std;
 use std::fmt;
 use self::rand::random;
 
@@ -31,6 +32,18 @@ pub struct Layout(Layer, Layer);
 
 
 pub struct LayoutPosMap([Option<KeyPress>; 128]);
+
+#[derive(Debug, PartialEq)]
+pub enum ParseLayoutError
+{
+	RowCount(usize),
+	RowLength { row: usize, expected: usize, found: usize },
+	HandSplit { row: usize },
+	InvalidKey(String),
+	DuplicateKey(char),
+	// The corpus is letters only, so a missing letter would fake a low score.
+	MissingLetter(char),
+}
 
 #[derive(Clone)]
 pub struct LayoutShuffleMask(KeyMap<bool>);
@@ -270,6 +283,8 @@ static KEY_CENTER_COLUMN: KeyMap<bool> = [
 
 pub static KP_NONE: Option<KeyPress> = None;
 
+static ROW_LENGTHS: [usize; 3] = [11, 11, 10];
+
 static LAYOUT_FILE_IDXS: KeyMap<usize> = [
 	0,  1,  2,  3,  4,     6,  7,  8,  9,  10, 11,
 	13, 14, 15, 16, 17,    19, 20, 21, 22, 23, 24,
@@ -296,6 +311,69 @@ impl Layout
 		}
 
 		Layout(Layer(lower), Layer(upper))
+	}
+
+	// Same rows as `Display` without the thumb line: keys separated by
+	// whitespace, optional "|" between the hands. Letters may be either case.
+	// Thumbs match the reference layouts:
+	// space on the right thumb, newline on shifted space. Shifted punctuation
+	// stays unmapped, as `normalize_text` drops punctuation anyway.
+	pub fn parse(text: &str)
+	-> Result<Layout, ParseLayoutError>
+	{
+		let rows: Vec<Vec<&str>> = text.lines()
+			.map(|line| line.split_whitespace().collect::<Vec<_>>())
+			.filter(|keys| !keys.is_empty())
+			.collect();
+		if rows.len() != ROW_LENGTHS.len() {
+			return Err(ParseLayoutError::RowCount(rows.len()));
+		}
+
+		let mut lower = ['\0'; NUM_OF_KEYS];
+		let mut i = 0;
+		for (row, (keys, &expected)) in rows.iter().zip(ROW_LENGTHS.iter()).enumerate() {
+			// A misplaced "|" would silently shift keys to the other hand.
+			match keys.iter().position(|k| *k == "|") {
+				Some(5) | None => {},
+				Some(_) => return Err(ParseLayoutError::HandSplit { row: row + 1 }),
+			}
+			let keys: Vec<&str> = keys.iter().cloned().filter(|k| *k != "|").collect();
+			// Checked per row, so 10/11/11 keys cannot shift into the wrong rows.
+			if keys.len() != expected {
+				return Err(ParseLayoutError::RowLength { row: row + 1, expected: expected, found: keys.len() });
+			}
+			for key in keys {
+				let mut chars = key.chars();
+				let c = match (chars.next(), chars.next()) {
+					(Some(c), None) if c.is_ascii_graphic() => c.to_ascii_lowercase(),
+					_ => return Err(ParseLayoutError::InvalidKey(key.to_string())),
+				};
+				if lower[..i].contains(&c) {
+					return Err(ParseLayoutError::DuplicateKey(c));
+				}
+				lower[i] = c;
+				i += 1;
+			}
+		}
+		if let Some(c) = (b'a'..=b'z').map(char::from).find(|c| !lower.contains(c)) {
+			return Err(ParseLayoutError::MissingLetter(c));
+		}
+
+		lower[33] = ' ';
+		let mut upper = lower;
+		for c in upper.iter_mut() {
+			*c = c.to_ascii_uppercase();
+		}
+		upper[33] = '\n';
+		Ok(Layout(Layer(lower), Layer(upper)))
+	}
+
+	// Unshifted keys in `KeyMap` order.
+	pub fn base_keys(&self)
+	-> &KeyMap<char>
+	{
+		let Layout(Layer(ref keys), _) = *self;
+		keys
 	}
 
 	pub fn shuffle(&mut self, times: usize)
@@ -382,6 +460,30 @@ impl LayoutPosMap
 }
 
 
+impl fmt::Display for ParseLayoutError
+{
+	fn fmt(&self, f: &mut fmt::Formatter)
+	-> fmt::Result
+	{
+		match *self {
+			ParseLayoutError::RowCount(found) =>
+				write!(f, "expected {} rows, found {}", ROW_LENGTHS.len(), found),
+			ParseLayoutError::RowLength { row, expected, found } =>
+				write!(f, "row {}: expected {} keys, found {}", row, expected, found),
+			ParseLayoutError::HandSplit { row } =>
+				write!(f, "row {}: put | after the 5th key", row),
+			ParseLayoutError::InvalidKey(ref key) =>
+				write!(f, "invalid key \"{}\": use one printable ASCII character", key),
+			ParseLayoutError::DuplicateKey(c) =>
+				write!(f, "key '{}' appears twice", c),
+			ParseLayoutError::MissingLetter(c) =>
+				write!(f, "letter '{}' has no key", c),
+		}
+	}
+}
+
+impl std::error::Error for ParseLayoutError {}
+
 impl fmt::Display for Layout
 {
 	fn fmt(&self, f: &mut fmt::Formatter)
@@ -409,5 +511,36 @@ impl fmt::Display for Layer
 			layer[22], layer[23], layer[24], layer[25], layer[26],
 			layer[27], layer[28], layer[29], layer[30], layer[31],
 			layer[32], layer[33])
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use penalty::{calculate_penalty, prepare_quartad_list};
+
+	#[test]
+	fn parsed_qwerty_scores_like_the_static_layout() {
+		let parsed = Layout::parse("q w e r t | y u i o p -\na s d f g | h j k l ; '\nz x c v b | n m , . /").unwrap();
+		// One quartad list for both, so the f64 sums run in the same order.
+		let quartads = prepare_quartad_list("the quick brown fox\njumps over the lazy dog\n");
+		let expected = calculate_penalty(&quartads, &QWERTY_LAYOUT).penalty;
+		let actual = calculate_penalty(&quartads, &parsed).penalty;
+		assert_eq!(actual.keys, expected.keys);
+		assert_eq!(actual.total, expected.total);
+	}
+
+	#[test]
+	fn parse_rejects_invalid_layouts() {
+		let parse = |text: &str| Layout::parse(text).err();
+		let rows = "q w e r t | y u i o p -\na s d f g | h j k l ; '\nz x c v b | n m , . /";
+		assert_eq!(parse(&format!("{}\n0 | 1", rows)), Some(ParseLayoutError::RowCount(4)));
+		assert_eq!(parse("q w e r t | y u i o p\na s d f g | h j k l ; '\nz x c v b | n m , . / -"),
+			Some(ParseLayoutError::RowLength { row: 1, expected: 11, found: 10 }));
+		assert_eq!(parse(&rows.replace("t |", "| t")), Some(ParseLayoutError::HandSplit { row: 1 }));
+		assert_eq!(parse(&rows.to_uppercase()), None);
+		assert_eq!(parse(&rows.replace("-", "ab")), Some(ParseLayoutError::InvalidKey("ab".to_string())));
+		assert_eq!(parse(&rows.replace("-", "q")), Some(ParseLayoutError::DuplicateKey('q')));
+		assert_eq!(parse(&rows.replace("z", "1")), Some(ParseLayoutError::MissingLetter('z')));
 	}
 }

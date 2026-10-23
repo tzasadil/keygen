@@ -135,6 +135,7 @@ fn run_ref(s: &str,quartads:Option<&QuartadList> )
 			println!("");
 		};
 		ref_test("QWERTY", &layout::QWERTY_LAYOUT);
+		ref_test("MY LAYOUT", &layout::MY_LAYOUT);
 		ref_test("X1", &layout::X1);
 		ref_test("TESTING", &layout::TESTING);
 		ref_test("TESTING2", &layout::TESTING2);

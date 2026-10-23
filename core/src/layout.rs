@@ -128,6 +128,17 @@ pub static X1: Layout = Layout(
 
 
 
+// The layout I type on every day. Scores in the README come from it.
+pub static MY_LAYOUT: Layout = Layout(
+	Layer([	'm', 'l', 'd', 'p', 'f',   '\'', 'u', 'o', 'y', 'k', '/',
+			'r', 'n', 't', 's', 'v',   'g', 'a', 'e', 'i', 'h', 'x',
+			'z', 'j', 'w', 'c', 'b',   'q', ',', '.', '=', ';',
+	              				'\0',  ' ']),
+	Layer([	'M', 'L', 'D', 'P', 'F',   '"', 'U', 'O', 'Y', 'K', '?',
+			'R', 'N', 'T', 'S', 'V',   'G', 'A', 'E', 'I', 'H', 'X',
+			'Z', 'J', 'W', 'C', 'B',   'Q', '<', '>', '+', ':',
+	              				'\0',  '\n']));
+
 pub static QWERTY_LAYOUT: Layout = Layout(
 	Layer([	'q', 'w', 'e', 'r', 't',   'y', 'u', 'i', 'o', 'p', '-',
 			'a', 's', 'd', 'f', 'g',   'h', 'j', 'k', 'l', ';', '\'',
@@ -528,6 +539,18 @@ mod tests {
 		let actual = calculate_penalty(&quartads, &parsed).penalty;
 		assert_eq!(actual.keys, expected.keys);
 		assert_eq!(actual.total, expected.total);
+	}
+
+	#[test]
+	fn reference_layouts_reproduce_readme_scores() {
+		let corpus = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../corpus/english.txt")).unwrap();
+		let quartads = prepare_quartad_list(&::penalty::normalize_text(&corpus));
+		let score = |layout| {
+			let penalty = calculate_penalty(&quartads, layout).penalty;
+			penalty.total / penalty.len as f64
+		};
+		assert!((score(&QWERTY_LAYOUT) - 0.663).abs() < 0.0005);
+		assert!((score(&MY_LAYOUT) - 0.313).abs() < 0.0005);
 	}
 
 	#[test]

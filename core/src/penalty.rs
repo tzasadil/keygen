@@ -178,6 +178,52 @@ static PenaltyDescriptions: [KeyPenaltyDescription; 15] = [
     },
 ];
 
+// Lowercases, folds accents, and keeps only letters, spaces, and newlines.
+// The bundled corpora are already folded this way (Czech "muze", German "fur",
+// "groses"), so pasted text scores on the same terms.
+pub fn normalize_text(text: &str) -> String {
+    text.to_lowercase()
+        .chars()
+        .map(fold_accent)
+        .filter_map(|c| match c {
+            // Only space and newline have keys. A CR from CRLF line endings would
+            // drop every trigram that spans a line break.
+            '\r' => None,
+            '\n' => Some('\n'),
+            // Tabs and non-breaking spaces would otherwise drop their trigrams.
+            c if c.is_whitespace() => Some(' '),
+            // Also drops decomposed accent marks (U+0300..U+036F), so "z" +
+            // combining caron folds like a precomposed "ž".
+            c if c.is_alphabetic() => Some(c),
+            _ => None,
+        })
+        .collect()
+}
+
+// Covers Czech, Slovak, German, and common Western and Central European letters.
+// TODO: switch to NFD via the `unicode-normalization` crate if visitors paste
+// other Latin scripts and their trigrams get dropped as non-ASCII.
+fn fold_accent(c: char) -> char {
+    match c {
+        'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'ą' => 'a',
+        'ç' | 'č' | 'ć' => 'c',
+        'ď' => 'd',
+        'è' | 'é' | 'ê' | 'ë' | 'ě' | 'ę' => 'e',
+        'ì' | 'í' | 'î' | 'ï' => 'i',
+        'ľ' | 'ĺ' | 'ł' => 'l',
+        'ñ' | 'ň' | 'ń' => 'n',
+        'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ő' | 'ø' => 'o',
+        'ř' | 'ŕ' => 'r',
+        // The German corpus spells "groß" as "gros".
+        'š' | 'ś' | 'ß' => 's',
+        'ť' => 't',
+        'ù' | 'ú' | 'û' | 'ü' | 'ů' | 'ű' => 'u',
+        'ý' | 'ÿ' => 'y',
+        'ž' | 'ź' | 'ż' => 'z',
+        other => other,
+    }
+}
+
 // Windows over chars, not bytes: slicing a &str by char index panics inside
 // multi-byte characters such as 'ž'.
 pub fn prepare_quartad_list(string: &str) -> QuartadList {
@@ -435,5 +481,26 @@ pub fn calculate_penalty(quartads: &QuartadList, layout: &Layout) -> BestLayouts
     BestLayoutsEntry {
         layout: layout.clone(),
         penalty: result,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_text_folds_precomposed_and_decomposed_accents() {
+        assert_eq!(normalize_text("Žluťoučký kůň"), "zlutoucky kun");
+        assert_eq!(normalize_text("z\u{30C}lu\u{30C}"), "zlu");
+        assert_eq!(normalize_text("Größe, ja!"), "grose ja");
+        assert_eq!(normalize_text("a\tb\r\nc\u{A0}d"), "a b\nc d");
+    }
+
+    #[test]
+    fn prepare_quartad_list_counts_by_char() {
+        assert!(prepare_quartad_list("ab").map.is_empty());
+        let quartads = prepare_quartad_list("žabab");
+        assert_eq!(quartads.map.get(&['a', 'b', 'a']), Some(&1));
+        assert_eq!(quartads.map.get(&['ž', 'a', 'b']), None);
     }
 }

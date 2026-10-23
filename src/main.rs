@@ -72,12 +72,8 @@ fn main()
 	};
 	print!("\n");
 	print!("{}",corpus_filename);
-	let corpus:String= std::fs::read_to_string(corpus_filename)
-		.expect("Should have been able to read the file")
-		.to_ascii_lowercase()
-		.chars()
-		.filter(|c: &char|(*c).is_alphabetic() || (*c).is_whitespace())
-		.collect();
+	let corpus = penalty::normalize_text(&std::fs::read_to_string(corpus_filename)
+		.expect("Should have been able to read the file"));
 
 	// Read layout, if applicable.
 	let _layout;

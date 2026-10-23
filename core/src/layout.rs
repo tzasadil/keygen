@@ -77,7 +77,7 @@ pub struct KeyPress
 * STATICS *
 * ------- */
 
-const NUM_OF_KEYS: usize = 34;
+pub const NUM_OF_KEYS: usize = 34;
 
 // pub static _: Layout = Layout(
 //     Layer([ '', '', '',  '', '',     '', '', '', '', '', '',

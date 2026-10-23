@@ -26,6 +26,8 @@ pub struct Penalty {
     pub penalties: Vec<KeyPenalty>,
     pub fingers: [i64; 8],
     pub hands: [i64; 2],
+    // Includes thumbs, unlike `fingers` and `hands`, so it sums to `len`.
+    pub keys: KeyMap<i64>,
     pub hand_penalties: [f64; 2],
     pub total: f64,
     pub len: i64,
@@ -45,6 +47,7 @@ impl Penalty {
             penalties: penalties,
             fingers: [0; 8],
             hands: [0; 2],
+            keys: [0; NUM_OF_KEYS],
             hand_penalties: [0.0; 2],
             total: 0.0,
             len : 0,
@@ -91,7 +94,7 @@ static BASE_PENALTY: KeyMap<f64> = [
                         0.0,    0.0,
 ];
 
-static PenaltyDescriptions: [KeyPenaltyDescription; 15] = [
+static PenaltyDescriptions: [KeyPenaltyDescription; 16] = [
     // Base penalty.
     KeyPenaltyDescription {
         name: "Base",
@@ -176,6 +179,13 @@ static PenaltyDescriptions: [KeyPenaltyDescription; 15] = [
         name: "4 alternations in a row",
         show: false,
     },
+    //15
+    // Penalise 2 points for every inward roll on one hand. "Roll in" then
+    // refunds 0.99 of it for the comfortable ones.
+    KeyPenaltyDescription {
+        name: "Any roll in",
+        show: false,
+    },
 ];
 
 // Lowercases, folds accents, and keeps only letters, spaces, and newlines.
@@ -251,6 +261,7 @@ pub fn calculate_penalty(quartads: &QuartadList, layout: &Layout) -> BestLayouts
             &None => continue,
         };
         result.len += count;
+        result.keys[curr.pos] += count;
 
         let useFinger = |result: &mut Penalty, i: usize| match curr.finger {
             Finger::Pinky => result.fingers[i] += count,
@@ -273,12 +284,8 @@ pub fn calculate_penalty(quartads: &QuartadList, layout: &Layout) -> BestLayouts
         let mut log = |i: usize, penalty: f64| {
             let p = penalty * *count as f64;
             //println!("{}; {}", i, penalty);
-            if i!=99 {//&& curr.hand!= Hand::Left{
-                result.penalties[i].times += *count as f64;
-                result.penalties[i].total += p;
-                
-
-            }
+            result.penalties[i].times += *count as f64;
+            result.penalties[i].total += p;
             match curr.hand {
                 Hand::Left => {
                     result.hand_penalties[0] += p;
@@ -377,7 +384,7 @@ pub fn calculate_penalty(quartads: &QuartadList, layout: &Layout) -> BestLayouts
 
             }
             if old1.finger != Finger::Thumb && ( is_roll_in2(curr.finger, old1.finger) && is_roll_in(curr.finger, old1.finger)){
-                log(99,2.0);
+                log(15, 2.0);
             }
             
         }
@@ -494,6 +501,15 @@ mod tests {
         assert_eq!(normalize_text("z\u{30C}lu\u{30C}"), "zlu");
         assert_eq!(normalize_text("Größe, ja!"), "grose ja");
         assert_eq!(normalize_text("a\tb\r\nc\u{A0}d"), "a b\nc d");
+    }
+
+    #[test]
+    fn penalty_rows_and_key_presses_account_for_every_keystroke() {
+        let quartads = prepare_quartad_list("the quick brown fox jumps over the lazy dog\n");
+        let penalty = calculate_penalty(&quartads, &QWERTY_LAYOUT).penalty;
+        let rows: f64 = penalty.penalties.iter().map(|p| p.total).sum();
+        assert!((rows - penalty.total).abs() < 1e-9);
+        assert_eq!(penalty.keys.iter().sum::<i64>(), penalty.len);
     }
 
     #[test]

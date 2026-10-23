@@ -1,5 +1,11 @@
 [workspace]
-members = ["core"]
+# The 2015-edition root would default to resolver 1. That enables features of
+# target-specific deps even when the target does not match, which turns on
+# leptos_macro's erase_components code without the leptos side.
+resolver = "2"
+members = ["core", "app"]
+# The app is browser-only. Trunk builds it, so plain cargo commands skip it.
+default-members = [".", "core"]
 
 [package]
 name = "keygen"

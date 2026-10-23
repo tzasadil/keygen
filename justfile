@@ -11,9 +11,14 @@ search corpus="english":
     cargo run --release -- run corpus/{{corpus}}.txt
 
 test:
-    cargo test --workspace
+    cargo test
 
-# Prove the scoring core still builds for the browser
-wasm-check:
-    rustup target add wasm32-unknown-unknown
-    cargo build -p keygen-core --target wasm32-unknown-unknown --release
+# Serve the browser playground with live reload
+[working-directory: 'app']
+serve:
+    trunk serve --open
+
+# Build the browser playground into app/dist. Pass the path it is served under.
+[working-directory: 'app']
+web url="/":
+    trunk build --release --public-url {{url}}

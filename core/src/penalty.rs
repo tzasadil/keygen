@@ -79,13 +79,13 @@ const _: () = {
     }
 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct KeyPenalty {
     pub kind: PenaltyKind,
     pub times: f64,
     pub total: f64,
 }
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Penalty {
     // One row per kind, in `PenaltyKind::ALL` order. Rows sum to `total`.
     pub penalties: Vec<KeyPenalty>,
@@ -145,6 +145,7 @@ impl PartialOrd for BestLayoutsEntry {
         self.penalty.total.partial_cmp(&other.penalty.total)
     }
 }
+#[derive(PartialEq)]
 pub struct QuartadList {
     pub map: HashMap<[char; 3], i64>,
 }

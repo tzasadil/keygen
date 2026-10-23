@@ -58,6 +58,8 @@ cargo run --release -- run corpus/english.txt
 
 With [just](https://github.com/casey/just): `just ref czech`, `just search german`, `just test`. Run `just` to list all recipes.
 
+Browser playground: `just serve`. It needs [Trunk](https://trunkrs.dev).
+
 Sample report for QWERTY:
 
 ```

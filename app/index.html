@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>keygen</title>
+    <!-- Trunk fills in --public-url, so assets and corpus fetches work under a sub-path. -->
+    <base data-trunk-public-url />
+    <link data-trunk rel="rust" data-wasm-opt="z" />
+    <link data-trunk rel="css" href="style.css" />
+    <!-- Fetched on demand, so the 3 MB English corpus stays out of the .wasm. -->
+    <link data-trunk rel="copy-dir" href="../corpus" />
+  </head>
+  <body></body>
+</html>

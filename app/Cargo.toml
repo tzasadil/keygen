@@ -1,0 +1,10 @@
+[package]
+name = "keygen-app"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+keygen-core = { path = "../core" }
+console_error_panic_hook = "0.1.7"
+gloo-net = { version = "0.7.0", default-features = false, features = ["http"] }
+leptos = { version = "0.9.0-rc0", features = ["csr"] }

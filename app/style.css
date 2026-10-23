@@ -62,9 +62,16 @@ h2 {
 
 .segments {
   display: inline-flex;
+  max-width: 100%;
   border: 1px solid var(--line);
   border-radius: 0.5rem;
   overflow: hidden;
+}
+
+.segment {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
 }
 
 .segment input {
@@ -112,11 +119,6 @@ textarea {
   border-radius: 0.5rem;
 }
 
-.layout-pickers {
-  display: flex;
-  gap: 1rem;
-}
-
 .layout-picker {
   display: flex;
   align-items: end;
@@ -160,13 +162,25 @@ select {
   color: #b91c1c;
 }
 
-.scores {
+/* Shared two-column grid, so pickers, scores, and keyboards line up per side. */
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.sides {
+  margin-top: 1.5rem;
+}
+
+.side {
   display: flex;
-  gap: 1rem;
-  margin-top: 2rem;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .score {
+  /* Fills the column, so both cards match even when only one shows a change. */
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -198,12 +212,6 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
-.keyboards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
-  gap: 1.5rem;
-}
-
 .keyboard {
   margin: 0;
 }
@@ -216,7 +224,9 @@ select {
 
 .keys {
   display: grid;
-  grid-template-columns: repeat(5, 1fr) 0.4fr repeat(6, 1fr);
+  /* minmax(0, …): plain 1fr will not shrink below the key labels, which
+     pushes the keyboard past narrow screens. */
+  grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 0.4fr) repeat(6, minmax(0, 1fr));
   gap: 0.25rem;
 }
 
@@ -232,7 +242,7 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
-.key[style*="span 4"] {
+.key.thumb {
   aspect-ratio: auto;
 }
 
@@ -343,8 +353,12 @@ button.key:focus-visible {
   font-size: 0.85rem;
 }
 
-@media (max-width: 40rem) {
-  .scores {
-    flex-direction: column;
+@media (max-width: 48rem) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+
+  .segment span {
+    padding: 0.45rem 0.55rem;
   }
 }

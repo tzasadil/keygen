@@ -241,11 +241,22 @@ fn App() -> impl IntoView {
             </header>
             <section class="controls">
                 <SourcePicker source pasted />
-                <div class="layout-pickers">
-                    <LayoutPicker label="Layout A" side=sides[0] />
-                    <LayoutPicker label="Layout B" side=sides[1] />
-                </div>
             </section>
+            // Each picker heads its own column, so it sits above that layout's
+            // score, and on narrow screens stays next to it.
+            <div class="columns sides">
+                {[("Layout A", 0), ("Layout B", 1)]
+                    .map(|(label, side)| {
+                        view! {
+                            <div class="side">
+                                <LayoutPicker label side=sides[side] />
+                                <Show when=move || status.get() == Status::Ready>
+                                    <ScoreCard sides scores side />
+                                </Show>
+                            </div>
+                        }
+                    })}
+            </div>
             {move || match status.get() {
                 Status::Loading => {
                     view! { <p class="status" role="status">"Loading…"</p> }.into_any()
@@ -366,15 +377,11 @@ fn Results(sides: [Side; 2], scores: Scores) -> impl IntoView {
     });
 
     view! {
-        <section class="scores" aria-label="Penalty per keystroke" aria-live="polite">
-            <ScoreCard sides scores side=0 />
-            <ScoreCard sides scores side=1 />
-        </section>
         <p class="meta">"Keystrokes " {move || group_thousands(keystrokes())}</p>
         <section>
             <h2>"Heatmap"</h2>
             <p class="hint" id="swap-hint">"Select two keys to swap"</p>
-            <div class="keyboards">
+            <div class="columns">
                 <Keyboard sides scores side=0 max_share />
                 <Keyboard sides scores side=1 max_share />
             </div>
@@ -413,7 +420,7 @@ fn ScoreCard(sides: [Side; 2], scores: Scores, side: usize) -> impl IntoView {
         })
     };
     view! {
-        <div class="score">
+        <div class="score" aria-live="polite">
             <span class="score-name">{move || sides[side].name()}</span>
             <span class="score-value">{move || format!("{:.3}", score())}</span>
             <span class="score-change">{change}</span>
@@ -428,7 +435,9 @@ fn key_cell(pos: usize) -> (usize, usize, usize) {
         0..=10 => (1, pos),
         11..=21 => (2, pos - 11),
         22..=31 => (3, pos - 22),
-        33 => return (4, 7, 4),
+        // Columns 4 to 9 span 3.0 to 8.4 key widths, centred on the 11.4-wide
+        // grid (11 keys plus the 0.4 gap).
+        33 => return (4, 4, 6),
         _ => unreachable!("the left thumb is empty in every preset and never rendered"),
     };
     (row, if i < 5 { i + 1 } else { i + 2 }, 1)
@@ -495,7 +504,7 @@ fn Keyboard(sides: [Side; 2], scores: Scores, side: usize, max_share: Memo<f64>)
             <div class="keys">
                 {letter_keys}
                 <div
-                    class="key"
+                    class="key thumb"
                     class:hot={move || key_heat() > 0.7}
                     role="img"
                     aria-label=move || format!("{} {}%", label(), percent())

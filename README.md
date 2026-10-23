@@ -31,9 +31,8 @@ Score is the average penalty per keystroke, lower is better.
 | Hand alternation | 71.6% / 67.4% | 81.3% / 83.7% |
 | Inward / outward rolls (English) | 11.0% / 10.3% | 10.2% / 4.5% |
 | Left / right hand load (English) | 45.9% / 34.2% | 40.0% / 40.1% |
-| Lightest finger (English) | 1.2% (right pinky) | 6.1% (right pinky) |
 
-Thumbs carry the remaining load. The best English-only layout the search found scores 0.300.
+Thumbs carry the remaining load, which is why the hand sum does not add to to 100. 
 
 ## What I added to the fork
 

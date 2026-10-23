@@ -7,7 +7,7 @@ use std::ops::Range;
 //use layout;
 use std::vec::Vec;
 
-use layout::*;
+use crate::layout::*;
 
 // Every cost the model charges, in report row order. Weights live at the
 // `log` calls in `calculate_penalty`.

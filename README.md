@@ -44,7 +44,7 @@ Thumbs carry the remaining load, which is why the hand sum does not add to to 10
   - Thumbs count as their own hand, so the space bar does not distort the alternation and roll statistics.
   - Tracks load per finger and per hand.
 - **Corpora**: English, Czech, German, and a Python programming book. You can optimize for the languages you actually type.
-- **Maintenance**: builds on stable Rust. I removed the nightly-only `linked_list_extras` feature and updated `rand` from 0.3 to 0.7.
+- **Maintenance**: builds on stable Rust. I removed the nightly-only `linked_list_extras` feature and moved to edition 2024 and current dependencies (`rand` 0.3 to 0.10).
 
 ## Run
 

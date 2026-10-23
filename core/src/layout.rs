@@ -1,10 +1,9 @@
 /// Data structures and methods for creating and shuffling keyboard layouts.
 
-extern crate rand;
 
 use std;
 use std::fmt;
-use self::rand::random;
+use rand::random_range;
 
 /* ----- *
  * TYPES *
@@ -415,14 +414,14 @@ impl Layout
 
 	fn  shuffle_position() -> (usize, usize)
 	{
-		let mut i = random::<usize>() % NUM_OF_KEYS;
-		let mut j = random::<usize>() % NUM_OF_KEYS;
+		let mut i = random_range(0..NUM_OF_KEYS);
+		let mut j = random_range(0..NUM_OF_KEYS);
 
 		while !SWAPPABLE_MAP[i] {
-			i = random::<usize>() % NUM_OF_KEYS;
+			i = random_range(0..NUM_OF_KEYS);
 		}
 		while !SWAPPABLE_MAP[j] {
-			j = random::<usize>() % NUM_OF_KEYS;
+			j = random_range(0..NUM_OF_KEYS);
 		}
 		(i,j)
 	}
@@ -528,7 +527,7 @@ impl fmt::Display for Layer
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use penalty::{calculate_penalty, prepare_quartad_list};
+	use crate::penalty::{calculate_penalty, prepare_quartad_list};
 
 	#[test]
 	fn parsed_qwerty_scores_like_the_static_layout() {
@@ -544,7 +543,7 @@ mod tests {
 	#[test]
 	fn reference_layouts_reproduce_readme_scores() {
 		let corpus = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../corpus/english.txt")).unwrap();
-		let quartads = prepare_quartad_list(&::penalty::normalize_text(&corpus));
+		let quartads = prepare_quartad_list(&crate::penalty::normalize_text(&corpus));
 		let score = |layout| {
 			let penalty = calculate_penalty(&quartads, layout).penalty;
 			penalty.total / penalty.len as f64

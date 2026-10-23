@@ -1,9 +1,10 @@
 [package]
 name = "keygen-core"
 version = "0.1.0"
+edition = "2024"
 authors = ["Xuming Zeng <xsznix@gmail.com>"]
 
 [dependencies]
-# On wasm32-unknown-unknown, the WASM crate must enable rand's `wasm-bindgen`
-# feature. Without it, getrandom 0.1 compiles to a dummy that fails at runtime.
-rand = "0.7.3"
+# On wasm32-unknown-unknown, the browser app must enable getrandom's `wasm_js`
+# feature. getrandom advises libraries against enabling it themselves.
+rand = "0.10.3"

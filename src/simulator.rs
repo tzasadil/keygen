@@ -1,13 +1,9 @@
-extern crate num_cpus;
 /// Applies the math in annealing.rs to keyboard layouts.
-extern crate rand;
-extern crate rayon;
 
-//use self::rand::{random, thread_rng};
-use self::rand::*;
+use rand::{random, random_range};
 use std::cmp::Ordering;
 //use std::collections::;
-use self::rayon::prelude::*;
+use rayon::prelude::*;
 use std::iter;
 use std::*;
 
@@ -32,7 +28,7 @@ pub fn simulate(
 ) {
     const CYCLES: i32 = 205000;
     const ITERATIONS: i32 = 5;
-    let threads = num_cpus::get();
+    let threads = thread::available_parallelism().map_or(1, |n| n.get());
     let BEST_LAYOUTS_KEPT: usize = threads * 3;
 
     let initial_penalty = || penalty::calculate_penalty(&quartads, init_layout);
@@ -51,14 +47,14 @@ pub fn simulate(
                 let mut accepted_layout = entry.clone();
                 let mut bestLayout: BestLayoutsEntry = entry.clone();
 
-                let printDelay = thread_rng().gen::<i32>() % 5000 ;
+                let printDelay = random::<i32>() % 5000 ;
                 let printFrequency =  5000;
                 let in_over_out = false;
                 for cycle in 1..CYCLES + 1 {
                     let mut curr_layout = accepted_layout.clone();
                     curr_layout
                         .layout
-                        .shuffle(random::<usize>() % num_swaps + 1);
+                        .shuffle(random_range(1..=num_swaps));
 
                     // Calculate penalty.
                     curr_layout = penalty::calculate_penalty(&quartads, &curr_layout.layout);

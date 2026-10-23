@@ -2,12 +2,8 @@
 /// Math is shamelessly taken from: http://mkweb.bcgsc.ca/carpalx/?simulated_annealing
 /// This code is written to be generic and can be reused for other applications.
 
-extern crate rand;
-
 use std::f64;
 use std::ops::Range;
-use self::rand::thread_rng;
-use self::rand::Rng;
 
 // These values are taken from Carpalx, with T0 adjusted for the scale that our
 // penalty model outputs.
@@ -40,7 +36,7 @@ pub fn accept_transition(de: f64, i: usize)
 		true
 	} else {
 		let p_de = cutoff_p(de, i);
-		let r: f64 = thread_rng().gen();
+		let r: f64 = rand::random();
 		r < p_de
 	}
 }

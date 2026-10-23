@@ -22,10 +22,10 @@ pub type KeyMap<T> =  [T; NUM_OF_KEYS];
 
 
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Layer(KeyMap<char>);
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Layout(Layer, Layer);
 
 
@@ -386,16 +386,21 @@ impl Layout
 		keys
 	}
 
+	// Swaps both layers, so a key keeps its shifted character.
+	pub fn swap(&mut self, i: usize, j: usize)
+	{
+		let Layout(lower, upper) = self;
+		lower.swap(i, j);
+		upper.swap(i, j);
+	}
+
 	pub fn shuffle(&mut self, times: usize)
 	{
 		for _ in 0..times {
 			loop {
 				let (i, j) = Layout::shuffle_position();
 				if CAN_SWAP_HALVES || (KEY_HANDS[i] == KEY_HANDS[j]){
-					let Layout(ref mut lower, ref mut upper) = *self;
-					
-					lower.swap(i, j);
-					upper.swap(i, j);
+					self.swap(i, j);
 					break;
 				}
 			}
@@ -550,6 +555,17 @@ mod tests {
 		};
 		assert!((score(&QWERTY_LAYOUT) - 0.663).abs() < 0.0005);
 		assert!((score(&MY_LAYOUT) - 0.313).abs() < 0.0005);
+	}
+
+	#[test]
+	fn swap_moves_the_shifted_character_along() {
+		let mut layout = QWERTY_LAYOUT.clone();
+		layout.swap(0, 1);
+		let map = layout.get_position_map();
+		let pos = |c| map.get_key_position(c).as_ref().map(|k| k.pos);
+		assert_eq!((pos('q'), pos('Q'), pos('w'), pos('W')), (Some(1), Some(1), Some(0), Some(0)));
+		layout.swap(1, 0);
+		assert!(layout == QWERTY_LAYOUT);
 	}
 
 	#[test]

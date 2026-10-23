@@ -95,7 +95,8 @@ h2 {
 }
 
 select:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+.reset:focus-visible {
   outline: 2px solid var(--side-1);
   outline-offset: 2px;
 }
@@ -118,7 +119,28 @@ textarea {
 
 .layout-picker {
   display: flex;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.layout-picker label {
+  display: flex;
   flex-direction: column;
+}
+
+.reset[aria-disabled="true"] {
+  color: var(--muted);
+  cursor: default;
+}
+
+.reset {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: white;
+  cursor: pointer;
 }
 
 select {
@@ -210,9 +232,32 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
-.key[style*="span 2"],
 .key[style*="span 4"] {
   aspect-ratio: auto;
+}
+
+button.key {
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.key:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Inset paper ring inside an accent ring: reads on cold and hot keys alike, and
+   the focus outline outside the key never covers it. */
+.key.selected {
+  box-shadow: inset 0 0 0 2px var(--side-1), inset 0 0 0 4px var(--paper);
+}
+
+.hint {
+  margin: -0.5rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .key.hot {

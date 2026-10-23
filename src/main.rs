@@ -1,8 +1,6 @@
 extern crate getopts;
+extern crate keygen_core;
 
-mod layout;
-mod penalty;
-mod annealing;
 mod simulator;
 
 
@@ -11,7 +9,8 @@ use std::env;
 use std::fs::File;
 use std::io::Read;
 use getopts::Options;
-use penalty::QuartadList;
+use keygen_core::{layout, penalty};
+use keygen_core::penalty::QuartadList;
 
 
 

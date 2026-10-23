@@ -11,11 +11,9 @@ use self::rayon::prelude::*;
 use std::iter;
 use std::*;
 
-use annealing;
-use layout;
-use penalty;
+use keygen_core::{annealing, layout, penalty};
 
-use penalty::*;
+use keygen_core::penalty::*;
 
 #[derive(Clone)]
 

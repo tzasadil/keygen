@@ -56,6 +56,8 @@ cargo run --release -- run-ref corpus/english.txt
 cargo run --release -- run corpus/english.txt
 ```
 
+With [just](https://github.com/casey/just): `just ref czech`, `just search german`, `just test`. Run `just` to list all recipes.
+
 Sample report for QWERTY:
 
 ```

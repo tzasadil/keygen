@@ -23,8 +23,8 @@ struct LL<T> {
     next: Option<Box<LL<T>>>,
 }
 
-pub fn simulate<'a>(
-    quartads: &penalty::QuartadList<'a>,
+pub fn simulate(
+    quartads: &penalty::QuartadList,
     init_layout: &layout::Layout,
     debug: bool,
     top_layouts: usize,

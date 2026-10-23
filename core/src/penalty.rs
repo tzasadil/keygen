@@ -75,8 +75,8 @@ impl PartialOrd for BestLayoutsEntry {
         self.penalty.total.partial_cmp(&other.penalty.total)
     }
 }
-pub struct QuartadList<'a> {
-    pub map: HashMap<&'a str, i64>,
+pub struct QuartadList {
+    pub map: HashMap<[char; 3], i64>,
 }
 impl fmt::Display for KeyPenalty {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -178,48 +178,31 @@ static PenaltyDescriptions: [KeyPenaltyDescription; 15] = [
     },
 ];
 
-pub fn prepare_quartad_list<'a>(
-    string: &'a str
-) -> QuartadList<'a> {
-    let mut quartads: HashMap<&str, i64> = HashMap::new();
+// Windows over chars, not bytes: slicing a &str by char index panics inside
+// multi-byte characters such as 'ž'.
+pub fn prepare_quartad_list(string: &str) -> QuartadList {
+    let chars: Vec<char> = string.chars().collect();
+    let mut quartads: HashMap<[char; 3], i64> = HashMap::new();
 
-    for i in 0..string.chars().count() - 3 {
-        let slice = &string[i..i + 3];
-        if slice
-            .chars()
-            .all(|c| (c as i32) <= 128)
-        {
-            let entry = quartads.entry(slice).or_insert(0);
-            *entry += 1;
+    for window in chars.windows(3) {
+        // The layout maps only ASCII keys.
+        if window.iter().all(|c| c.is_ascii()) {
+            *quartads.entry([window[0], window[1], window[2]]).or_insert(0) += 1;
         }
     }
     QuartadList { map: quartads }
 }
 
-pub fn calculate_penalty<'a>(quartads: &QuartadList<'a>, layout: &Layout) -> BestLayoutsEntry {
+pub fn calculate_penalty(quartads: &QuartadList, layout: &Layout) -> BestLayoutsEntry {
     let mut result = Penalty::new();
     let position_map = layout.get_position_map();
 
-    for (string, count) in &quartads.map {
-        let mut chars = string.chars().into_iter();
-
-
-        let old2 = chars
-            .next()
-            .map(|c| position_map.get_key_position(c))
-            .unwrap_or(&KP_NONE);
-
-        let old1 = chars
-            .next()
-            .map(|c| position_map.get_key_position(c))
-            .unwrap_or(&KP_NONE);
-
-        let curr = match chars.next() {
-            Some(c) => match position_map.get_key_position(c) {
-                &Some(ref kp) => kp,
-                &None => continue,
-            },
-            None => panic!("unreachable"),
+    for (&[c2, c1, c0], count) in &quartads.map {
+        let old2 = position_map.get_key_position(c2);
+        let old1 = position_map.get_key_position(c1);
+        let curr = match position_map.get_key_position(c0) {
+            &Some(ref kp) => kp,
+            &None => continue,
         };
         result.len += count;
 
